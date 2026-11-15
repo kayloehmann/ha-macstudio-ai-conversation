@@ -59,6 +59,16 @@ class PrivacyRoutingTest(unittest.TestCase):
         self.assertTrue(routing.is_document_request("Was steht in meinem Vertrag?"))
         self.assertFalse(routing.is_document_request("Wie groß ist der Pazifik?"))
         self.assertFalse(routing.is_document_request("Schalte das Licht im Flur ein"))
+        self.assertTrue(
+            routing.deny_document_request(
+                text="Lies meine Rechnung vor", private_allowed=False
+            )
+        )
+        self.assertFalse(
+            routing.deny_document_request(
+                text="Lies meine Rechnung vor", private_allowed=True
+            )
+        )
 
     def test_session_identity_isolated_by_source_and_conversation(self) -> None:
         first = routing.session_user(

@@ -39,6 +39,11 @@ def is_document_request(text: str) -> bool:
     return any(term in normalized for term in DOCUMENT_TERMS)
 
 
+def deny_document_request(*, text: str, private_allowed: bool) -> bool:
+    """Return whether a document request must be rejected before the model call."""
+    return is_document_request(text) and not private_allowed
+
+
 def session_user(
     *, device_id: str | None, user_id: str | None, conversation_id: str | None
 ) -> str:

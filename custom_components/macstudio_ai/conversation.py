@@ -43,7 +43,12 @@ from .const import (
     RECOMMENDED_TEMPERATURE,
     RECOMMENDED_TOP_P,
 )
-from .routing import is_document_request, private_context_allowed, session_user
+from .routing import (
+    deny_document_request,
+    is_document_request,
+    private_context_allowed,
+    session_user,
+)
 
 # Max Anzahl LLM-Iterationen pro Antwort (Tool-Loop)
 MAX_TOOL_ITERATIONS = 10
@@ -211,6 +216,18 @@ class MacStudioAiConversationEntity(
             private_devices=private_devices,
             allow_private_text=options.get(CONF_ALLOW_PRIVATE_TEXT, True),
         )
+        if deny_document_request(
+            text=user_input.text, private_allowed=private_allowed
+        ):
+            intent_response = intent.IntentResponse(language=user_input.language)
+            intent_response.async_set_speech(
+                "Private Dokumente kann ich über diesen Lautsprecher nicht vorlesen."
+            )
+            return conversation.ConversationResult(
+                response=intent_response,
+                conversation_id=chat_log.conversation_id,
+                continue_conversation=False,
+            )
         private_request = private_allowed and (
             is_document_request(user_input.text)
             or request_user in self._private_sessions
