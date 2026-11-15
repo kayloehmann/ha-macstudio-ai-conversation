@@ -1,10 +1,4 @@
-"""The LLM Gateway Conversation integration.
-
-Forked from michelle-avery/openai-compatible-conversation, zugeschnitten auf den
-hauseigenen llm-gateway-Adapter (Failover-Kette Claude→Mistral→GPT→Gemini). Der
-dall-e Bild-Service der Vorlage entfällt (kein Provider in der Kette
-unterstützt Bildgenerierung).
-"""
+"""The MacStudio AI Conversation integration."""
 
 from __future__ import annotations
 
@@ -20,11 +14,11 @@ from .const import CONF_BASE_URL, LOGGER
 
 PLATFORMS = (Platform.CONVERSATION,)
 
-type LlmGatewayConfigEntry = ConfigEntry[openai.AsyncClient]
+type MacStudioAiConfigEntry = ConfigEntry[openai.AsyncClient]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: LlmGatewayConfigEntry) -> bool:
-    """Set up LLM Gateway Conversation from a config entry."""
+async def async_setup_entry(hass: HomeAssistant, entry: MacStudioAiConfigEntry) -> bool:
+    """Set up MacStudio AI Conversation from a config entry."""
     client = openai.AsyncOpenAI(
         api_key=entry.data.get(CONF_API_KEY) or "not-needed",
         http_client=get_async_client(hass),
@@ -34,7 +28,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: LlmGatewayConfigEntry) -
     try:
         await client.with_options(timeout=10.0).models.list()
     except openai.AuthenticationError as err:
-        LOGGER.error("Authentifizierung am Adapter fehlgeschlagen: %s", err)
+        LOGGER.error("Authentifizierung an der MacStudio-AI-Bridge fehlgeschlagen: %s", err)
         return False
     except openai.OpenAIError as err:
         raise ConfigEntryNotReady(err) from err
@@ -46,5 +40,5 @@ async def async_setup_entry(hass: HomeAssistant, entry: LlmGatewayConfigEntry) -
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Unload LLM Gateway Conversation."""
+    """Unload MacStudio AI Conversation."""
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)

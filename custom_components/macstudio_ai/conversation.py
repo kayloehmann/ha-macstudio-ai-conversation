@@ -1,4 +1,4 @@
-"""Conversation support for the LLM Gateway (llm-gateway adapter)."""
+"""Conversation support for MacStudio AI."""
 
 from collections.abc import Callable
 import json
@@ -26,21 +26,24 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import chat_session, device_registry as dr, intent, llm
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import LlmGatewayConfigEntry
+from . import MacStudioAiConfigEntry
 from .const import (
+    CONF_ALLOW_PRIVATE_TEXT,
     CONF_CHAT_MODEL,
     CONF_MAX_TOKENS,
     CONF_PROMPT,
+    CONF_PRIVATE_DEVICES,
     CONF_TEMPERATURE,
     CONF_TOP_P,
     DOMAIN,
-    GATEWAY_CLIENT_ID,
     LOGGER,
+    PRIVATE_CHAT_MODEL,
     RECOMMENDED_CHAT_MODEL,
     RECOMMENDED_MAX_TOKENS,
     RECOMMENDED_TEMPERATURE,
     RECOMMENDED_TOP_P,
 )
+from .routing import session_user, use_private_agent
 
 # Max Anzahl LLM-Iterationen pro Antwort (Tool-Loop)
 MAX_TOOL_ITERATIONS = 10
@@ -48,11 +51,11 @@ MAX_TOOL_ITERATIONS = 10
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: LlmGatewayConfigEntry,
+    config_entry: MacStudioAiConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up conversation entities."""
-    agent = LlmGatewayConversationEntity(config_entry)
+    agent = MacStudioAiConversationEntity(config_entry)
     async_add_entities([agent])
 
 
@@ -130,22 +133,22 @@ def _convert_content_to_param(
     )
 
 
-class LlmGatewayConversationEntity(
+class MacStudioAiConversationEntity(
     conversation.ConversationEntity, conversation.AbstractConversationAgent
 ):
-    """LLM Gateway conversation agent."""
+    """MacStudio AI conversation agent."""
 
     _attr_has_entity_name = True
     _attr_name = None
 
-    def __init__(self, entry: LlmGatewayConfigEntry) -> None:
+    def __init__(self, entry: MacStudioAiConfigEntry) -> None:
         """Initialize the agent."""
         self.entry = entry
         self._attr_unique_id = entry.entry_id
         self._attr_device_info = dr.DeviceInfo(
             identifiers={(DOMAIN, entry.entry_id)},
             name=entry.title,
-            manufacturer="llm-gateway",
+            manufacturer="MacStudio AI",
             model=entry.options.get(CONF_CHAT_MODEL, RECOMMENDED_CHAT_MODEL),
             entry_type=dr.DeviceEntryType.SERVICE,
         )
@@ -214,15 +217,33 @@ class LlmGatewayConversationEntity(
 
         client = self.entry.runtime_data
 
+        private_devices = set(options.get(CONF_PRIVATE_DEVICES, []))
+        private_request = use_private_agent(
+            device_id=user_input.device_id,
+            user_id=user_input.context.user_id,
+            private_devices=private_devices,
+            allow_private_text=options.get(CONF_ALLOW_PRIVATE_TEXT, True),
+        )
+        model = (
+            PRIVATE_CHAT_MODEL
+            if private_request
+            else options.get(CONF_CHAT_MODEL, RECOMMENDED_CHAT_MODEL)
+        )
+        request_user = session_user(
+            device_id=user_input.device_id,
+            user_id=user_input.context.user_id,
+            conversation_id=chat_log.conversation_id,
+        )
+
         for _iteration in range(MAX_TOOL_ITERATIONS):
             model_args = {
-                "model": options.get(CONF_CHAT_MODEL, RECOMMENDED_CHAT_MODEL),
+                "model": model,
                 "messages": messages,
                 "tools": tools or NOT_GIVEN,
                 "max_tokens": options.get(CONF_MAX_TOKENS, RECOMMENDED_MAX_TOKENS),
                 "top_p": options.get(CONF_TOP_P, RECOMMENDED_TOP_P),
                 "temperature": options.get(CONF_TEMPERATURE, RECOMMENDED_TEMPERATURE),
-                "user": GATEWAY_CLIENT_ID,
+                "user": request_user,
             }
             try:
                 result = await client.chat.completions.create(**model_args)
@@ -230,8 +251,8 @@ class LlmGatewayConversationEntity(
                 LOGGER.error("Rate limited: %s", err)
                 raise HomeAssistantError("Rate limited or insufficient funds") from err
             except openai.OpenAIError as err:
-                LOGGER.error("Fehler beim Aufruf des llm-gateway: %s", err)
-                raise HomeAssistantError("Error talking to llm-gateway") from err
+                LOGGER.error("Fehler beim Aufruf von MacStudio AI: %s", err)
+                raise HomeAssistantError("MacStudio AI ist nicht erreichbar") from err
 
             LOGGER.debug("Response %s", result)
             response = result.choices[0].message

@@ -1,6 +1,6 @@
 {
-  "name": "LLM Gateway Conversation",
-  "homeassistant": "2025.9.0",
+  "name": "MacStudio AI Conversation",
+  "homeassistant": "2026.11.0",
   "render_readme": true,
   "hacs": "2.0.5"
 }

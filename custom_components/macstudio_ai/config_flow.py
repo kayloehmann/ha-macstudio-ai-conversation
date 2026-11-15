@@ -1,4 +1,4 @@
-"""Config flow for the LLM Gateway Conversation integration."""
+"""Config flow for the MacStudio AI Conversation integration."""
 
 from __future__ import annotations
 
@@ -20,6 +20,9 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import llm
 from homeassistant.helpers.httpx_client import get_async_client
 from homeassistant.helpers.selector import (
+    BooleanSelector,
+    DeviceSelector,
+    DeviceSelectorConfig,
     NumberSelector,
     NumberSelectorConfig,
     SelectOptionDict,
@@ -30,10 +33,12 @@ from homeassistant.helpers.selector import (
 from homeassistant.helpers.typing import VolDictType
 
 from .const import (
+    CONF_ALLOW_PRIVATE_TEXT,
     CONF_BASE_URL,
     CONF_CHAT_MODEL,
     CONF_MAX_TOKENS,
     CONF_PROMPT,
+    CONF_PRIVATE_DEVICES,
     CONF_RECOMMENDED,
     CONF_TEMPERATURE,
     CONF_TOP_P,
@@ -48,11 +53,10 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
-# Der hauseigene Adapter prüft keinen API-Key; Feld optional mit Platzhalter.
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_BASE_URL, default=RECOMMENDED_BASE_URL): str,
-        vol.Optional(CONF_API_KEY, default="not-needed"): str,
+        vol.Required(CONF_API_KEY): str,
     }
 )
 
@@ -60,6 +64,8 @@ RECOMMENDED_OPTIONS = {
     CONF_RECOMMENDED: True,
     CONF_LLM_HASS_API: llm.LLM_API_ASSIST,
     CONF_PROMPT: DEFAULT_PROMPT,
+    CONF_PRIVATE_DEVICES: [],
+    CONF_ALLOW_PRIVATE_TEXT: True,
 }
 
 
@@ -73,8 +79,8 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> None:
     await client.with_options(timeout=10.0).models.list()
 
 
-class LlmGatewayConfigFlow(ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for LLM Gateway Conversation."""
+class MacStudioAiConfigFlow(ConfigFlow, domain=DOMAIN):
+    """Handle a config flow for MacStudio AI Conversation."""
 
     VERSION = 1
 
@@ -100,7 +106,7 @@ class LlmGatewayConfigFlow(ConfigFlow, domain=DOMAIN):
             errors["base"] = "unknown"
         else:
             return self.async_create_entry(
-                title="LLM Gateway",
+                title="MacStudio AI",
                 data=user_input,
                 options=RECOMMENDED_OPTIONS,
             )
@@ -112,11 +118,11 @@ class LlmGatewayConfigFlow(ConfigFlow, domain=DOMAIN):
     @staticmethod
     def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
         """Create the options flow."""
-        return LlmGatewayOptionsFlow(config_entry)
+        return MacStudioAiOptionsFlow(config_entry)
 
 
-class LlmGatewayOptionsFlow(OptionsFlow):
-    """LLM Gateway config flow options handler."""
+class MacStudioAiOptionsFlow(OptionsFlow):
+    """MacStudio AI config flow options handler."""
 
     def __init__(self, config_entry: ConfigEntry) -> None:
         """Initialize options flow."""
@@ -141,17 +147,19 @@ class LlmGatewayOptionsFlow(OptionsFlow):
                 CONF_RECOMMENDED: user_input[CONF_RECOMMENDED],
                 CONF_PROMPT: user_input.get(CONF_PROMPT, DEFAULT_PROMPT),
                 CONF_LLM_HASS_API: user_input.get(CONF_LLM_HASS_API),
+                CONF_PRIVATE_DEVICES: user_input.get(CONF_PRIVATE_DEVICES, []),
+                CONF_ALLOW_PRIVATE_TEXT: user_input.get(CONF_ALLOW_PRIVATE_TEXT, True),
             }
 
-        schema = llm_gateway_config_option_schema(self.hass, options)
+        schema = macstudio_ai_config_option_schema(self.hass, options)
         return self.async_show_form(step_id="init", data_schema=vol.Schema(schema))
 
 
-def llm_gateway_config_option_schema(
+def macstudio_ai_config_option_schema(
     hass: HomeAssistant,
     options: dict[str, Any] | MappingProxyType[str, Any],
 ) -> VolDictType:
-    """Return a schema for the LLM Gateway completion options."""
+    """Return a schema for MacStudio AI completion options."""
     hass_apis: list[SelectOptionDict] = [SelectOptionDict(label="No control", value="none")]
     hass_apis.extend(
         SelectOptionDict(label=api.name, value=api.id)
@@ -168,6 +176,15 @@ def llm_gateway_config_option_schema(
             description={"suggested_value": options.get(CONF_LLM_HASS_API)},
             default="none",
         ): SelectSelector(SelectSelectorConfig(options=hass_apis)),
+        vol.Optional(
+            CONF_PRIVATE_DEVICES,
+            description={"suggested_value": options.get(CONF_PRIVATE_DEVICES, [])},
+            default=[],
+        ): DeviceSelector(DeviceSelectorConfig(multiple=True)),
+        vol.Required(
+            CONF_ALLOW_PRIVATE_TEXT,
+            default=options.get(CONF_ALLOW_PRIVATE_TEXT, True),
+        ): BooleanSelector(),
         vol.Required(
             CONF_RECOMMENDED, default=options.get(CONF_RECOMMENDED, False)
         ): bool,

@@ -1,0 +1,14 @@
+{
+  "domain": "macstudio_ai",
+  "name": "MacStudio AI Conversation",
+  "after_dependencies": ["assist_pipeline", "intent"],
+  "codeowners": ["@kayloehmann"],
+  "config_flow": true,
+  "dependencies": ["conversation"],
+  "documentation": "https://github.com/kayloehmann/ha-macstudio-ai-conversation",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/kayloehmann/ha-macstudio-ai-conversation/issues",
+  "requirements": ["openai>=1.61.0"],
+  "version": "1.0.0"
+}

@@ -1,57 +1,44 @@
-# LLM Gateway Conversation — Home-Assistant-Integration
+# MacStudio AI Conversation — Home-Assistant-Integration
 
-Conversation-Agent für Home Assistant, der über den hauseigenen
-**`llm-gateway`**-Adapter (NAS, OpenAI-kompatibel, Failover-Kette
-Claude→Mistral→GPT→Gemini + Circuit-Breaker) mit Claude spricht — inkl.
-nativem Tool-Calling, also echter HA-Steuerung über die Assist-LLM-API.
+Conversation-Agent für Home Assistant, der die lokalen OpenClaw-Agenten auf
+**`macstudio-ai`** über eine abgesicherte, OpenAI-kompatible Bridge anspricht.
+Natives Tool-Calling erlaubt echte HA-Steuerung über die Assist-API.
 
-Fork von [michelle-avery/openai-compatible-conversation](https://github.com/michelle-avery/openai-compatible-conversation),
-zugeschnitten auf den Adapter: Default-`base_url` zeigt auf den Gateway, API-Key
-optional (der Adapter prüft keinen), deutscher Default-Prompt, ohne den
-dall-e-Bildservice der Vorlage.
+Die Integration trennt normale Sprachdialoge vom privaten Dokumentzugriff.
+Paperless ist nur im angemeldeten Text-Assist und auf ausdrücklich freigegebenen
+Satelliten verfügbar.
 
 ## Voraussetzung
 
-`llm-gateway` läuft erreichbar im LAN. Die Basis-URL im Einrichtungsdialog ist
-für die lokale Installation auf `http://10.111.0.104:8081/v1` voreingestellt.
+Die MacStudio-AI-Bridge läuft im privaten Netz. Die lokale Basis-URL ist
+`http://10.107.0.186:19790/v1`; der getrennte Bridge-Schlüssel ist erforderlich.
 
 ## Installation
 
 **Via HACS (Custom Repository):** HACS → ⋮ → *Custom repositories* → URL dieses
 Repos, Kategorie *Integration* → installieren → HA neu starten.
 
-**Manuell:** `custom_components/llm_gateway/` nach `/config/custom_components/`
+**Manuell:** `custom_components/macstudio_ai/` nach `/config/custom_components/`
 kopieren, HA neu starten.
 
 ## Einrichtung
 
-*Einstellungen → Geräte & Dienste → Integration hinzufügen → „LLM Gateway"*
+*Einstellungen → Geräte & Dienste → Integration hinzufügen → „MacStudio AI Conversation"*
 
-1. **Basis-URL** bestätigen (Default passt), API-Key-Feld leer lassen.
+1. **Basis-URL** bestätigen und den Bridge-Schlüssel eintragen.
 2. Unter *Konfigurieren*: **Instruktionen** (System-Prompt) anpassen,
    **Control Home Assistant** auf *Assist* stellen (Steuerung), Modell/Tokens
    nach Bedarf.
 3. *Einstellungen → Sprachassistenten*: Pipeline auf diesen Agenten zeigen lassen.
 
-## Modell
+4. Nur private Satelliten für Paperless freigeben.
 
-Default `claude-auto`: Der Adapter wählt für Home-Assistant-Anfragen ohne
-zusätzlichen Judge anhand der Anfragekomplexität die passende Modellstufe.
-Der Modellname ist in den Optionen frei änderbar.
+## Agenten
 
-Jede Anfrage trägt im OpenAI-kompatiblen `user`-Feld die feste Kennung
-`homeassistant`. Der Gateway kann HA dadurch als Aufrufer anzeigen, statt den
-Request unter `unknown` zu protokollieren.
+`openclaw/macstudio-ai` beantwortet Haussteuerungs- und Wissensfragen.
+`openclaw/macstudio-ai-private` besitzt zusätzlich rein lesenden Paperless-Zugriff.
+Die Integration wählt den privaten Agenten nur anhand der konfigurierten
+Gerätefreigabe oder eines angemeldeten Text-Assist-Dialogs.
 
-## Umbenennung von „Claude Conversation (Proxy)" (Domain `claude_proxy`)
-
-Diese Integration ist der Nachfolger von `ha-claude-conversation`
-(Domain `claude_proxy`). Der Domain-Wechsel ist eine Breaking Change in
-Home Assistant — bestehende Config-Einträge der alten Integration werden
-**nicht** automatisch migriert. Vorgehen bei einem Umstieg:
-
-1. Alte Integration(en) unter *Einstellungen → Geräte & Dienste* entfernen.
-2. Diese Integration (neu, Domain `llm_gateway`) installieren und für jede
-   vorher genutzte Pipeline neu einrichten (Titel, Prompt, Modell-Optionen
-   erneut setzen — nichts wird übernommen).
-3. Sprachassistenten-Pipelines auf die neuen Agenten umstellen.
+Jede HA-Konversation erhält eine getrennte OpenClaw-Sitzung. Geräte- und
+Gesprächskennung werden nicht an externe Dienste weitergegeben.

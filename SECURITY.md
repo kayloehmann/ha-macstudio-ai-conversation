@@ -7,7 +7,7 @@ versorgt. Fixes landen im `master`-Branch und als neues Release.
 
 | Version | Unterstützt        |
 | ------- | ------------------ |
-| 0.1.x   | :white_check_mark: |
+| 1.x     | :white_check_mark: |
 
 ## Schwachstelle melden
 
@@ -16,6 +16,7 @@ GitHub: *Security → Report a vulnerability* (Private Vulnerability Reporting)
 in diesem Repository. Du erhältst in der Regel innerhalb weniger Tage eine
 Rückmeldung.
 
-Diese Integration enthält selbst keine Geheimnisse; sensible Werte (z. B. die
-Adapter-Adresse) werden ausschließlich lokal in der Home-Assistant-Konfiguration
-gespeichert, nicht im Code.
+Die Integration enthält selbst keine Geheimnisse. Bridge-Adresse und
+Zugriffsschlüssel werden ausschließlich lokal in Home Assistant gespeichert.
+Paperless-Zugriff ist standardmäßig nur im angemeldeten Text-Assist verfügbar;
+Sprachsatelliten müssen einzeln freigegeben werden.

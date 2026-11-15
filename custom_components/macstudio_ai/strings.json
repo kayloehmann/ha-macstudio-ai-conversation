@@ -3,12 +3,12 @@
     "step": {
       "user": {
         "data": {
-          "base_url": "Basis-URL des llm-gateway-Adapters",
+          "base_url": "Basis-URL der MacStudio-AI-Bridge",
           "api_key": "[%key:common::config_flow::data::api_key%]"
         },
         "data_description": {
-          "base_url": "OpenAI-kompatibler Endpunkt deines llm-gateway-Adapters (Pfad /v1 nicht vergessen).",
-          "api_key": "Vom Adapter ignoriert — Platzhalter genügt."
+          "base_url": "Privater Endpunkt der MacStudio-AI-Bridge (Pfad /v1 nicht vergessen).",
+          "api_key": "Eigener Zugriffsschlüssel der MacStudio-AI-Bridge."
         }
       }
     },
@@ -28,10 +28,14 @@
           "temperature": "Temperature",
           "top_p": "Top P",
           "llm_hass_api": "[%key:common::config_flow::data::llm_hass_api%]",
+          "private_devices": "Satelliten mit Paperless-Zugriff",
+          "allow_private_text": "Paperless im angemeldeten Text-Assist erlauben",
           "recommended": "Empfohlene Modelleinstellungen"
         },
         "data_description": {
-          "prompt": "Wie der Assistent antworten soll. Jinja2-Template möglich."
+          "prompt": "Wie MacStudio AI antworten soll. Jinja2-Template möglich.",
+          "private_devices": "Nur diese Geräte dürfen den privaten Dokument-Agenten verwenden.",
+          "allow_private_text": "Erlaubt Paperless-Abfragen im angemeldeten Assist-Dialog ohne Satellit."
         }
       }
     }
