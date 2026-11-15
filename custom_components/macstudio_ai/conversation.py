@@ -203,7 +203,7 @@ class MacStudioAiConversationEntity(
         request_user = session_user(
             device_id=user_input.device_id,
             user_id=user_input.context.user_id,
-            conversation_id=user_input.conversation_id,
+            conversation_id=chat_log.conversation_id,
         )
         private_allowed = private_context_allowed(
             device_id=user_input.device_id,
