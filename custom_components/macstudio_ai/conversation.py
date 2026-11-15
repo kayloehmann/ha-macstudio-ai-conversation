@@ -43,7 +43,7 @@ from .const import (
     RECOMMENDED_TEMPERATURE,
     RECOMMENDED_TOP_P,
 )
-from .routing import session_user, use_private_agent
+from .routing import is_document_request, private_context_allowed, session_user
 
 # Max Anzahl LLM-Iterationen pro Antwort (Tool-Loop)
 MAX_TOOL_ITERATIONS = 10
@@ -144,6 +144,7 @@ class MacStudioAiConversationEntity(
     def __init__(self, entry: MacStudioAiConfigEntry) -> None:
         """Initialize the agent."""
         self.entry = entry
+        self._private_sessions: set[str] = set()
         self._attr_unique_id = entry.entry_id
         self._attr_device_info = dr.DeviceInfo(
             identifiers={(DOMAIN, entry.entry_id)},
@@ -181,7 +182,9 @@ class MacStudioAiConversationEntity(
         """Process a sentence."""
         with (
             chat_session.async_get_chat_session(
-                self.hass, user_input.conversation_id
+                self.hass,
+                user_input.conversation_id,
+                context=user_input.context,
             ) as session,
             conversation.async_get_chat_log(self.hass, session, user_input) as chat_log,
         ):
@@ -196,10 +199,31 @@ class MacStudioAiConversationEntity(
         assert user_input.agent_id
         options = self.entry.options
 
+        private_devices = set(options.get(CONF_PRIVATE_DEVICES, []))
+        request_user = session_user(
+            device_id=user_input.device_id,
+            user_id=user_input.context.user_id,
+            conversation_id=user_input.conversation_id,
+        )
+        private_allowed = private_context_allowed(
+            device_id=user_input.device_id,
+            user_id=user_input.context.user_id,
+            private_devices=private_devices,
+            allow_private_text=options.get(CONF_ALLOW_PRIVATE_TEXT, True),
+        )
+        private_request = private_allowed and (
+            is_document_request(user_input.text)
+            or request_user in self._private_sessions
+        )
+        if private_request:
+            self._private_sessions.add(request_user)
+            if len(self._private_sessions) > 256:
+                self._private_sessions.pop()
+
         try:
             await chat_log.async_provide_llm_data(
                 user_input.as_llm_context(DOMAIN),
-                options.get(CONF_LLM_HASS_API),
+                None if private_request else options.get(CONF_LLM_HASS_API),
                 options.get(CONF_PROMPT),
                 user_input.extra_system_prompt,
             )
@@ -217,24 +241,11 @@ class MacStudioAiConversationEntity(
 
         client = self.entry.runtime_data
 
-        private_devices = set(options.get(CONF_PRIVATE_DEVICES, []))
-        private_request = use_private_agent(
-            device_id=user_input.device_id,
-            user_id=user_input.context.user_id,
-            private_devices=private_devices,
-            allow_private_text=options.get(CONF_ALLOW_PRIVATE_TEXT, True),
-        )
         model = (
             PRIVATE_CHAT_MODEL
             if private_request
             else options.get(CONF_CHAT_MODEL, RECOMMENDED_CHAT_MODEL)
         )
-        request_user = session_user(
-            device_id=user_input.device_id,
-            user_id=user_input.context.user_id,
-            conversation_id=chat_log.conversation_id,
-        )
-
         for _iteration in range(MAX_TOOL_ITERATIONS):
             model_args = {
                 "model": model,
