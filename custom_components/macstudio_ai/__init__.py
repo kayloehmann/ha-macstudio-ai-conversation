@@ -17,6 +17,11 @@ PLATFORMS = (Platform.CONVERSATION,)
 type MacStudioAiConfigEntry = ConfigEntry[openai.AsyncClient]
 
 
+def _preload_chat_resource(client: openai.AsyncClient) -> None:
+    """Load OpenAI's lazy chat resource outside the Home Assistant event loop."""
+    client.chat.completions
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: MacStudioAiConfigEntry) -> bool:
     """Set up MacStudio AI Conversation from a config entry."""
     client = openai.AsyncOpenAI(
@@ -24,6 +29,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MacStudioAiConfigEntry) 
         http_client=get_async_client(hass),
         base_url=entry.data[CONF_BASE_URL],
     )
+    await hass.async_add_executor_job(_preload_chat_resource, client)
 
     try:
         await client.with_options(timeout=10.0).models.list()

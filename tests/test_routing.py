@@ -83,6 +83,28 @@ class PrivacyRoutingTest(unittest.TestCase):
         self.assertNotEqual(first, second)
         self.assertEqual(first, follow_up)
 
+    def test_read_only_result_forbids_action_claim(self) -> None:
+        guard = routing.action_claim_guard(
+            tool_results=[("homeassistant__GetLiveContext", False)],
+            read_only_tools={"homeassistant__GetLiveContext": True},
+        )
+        self.assertIn("keine Geräteaktion", guard)
+
+    def test_successful_mutation_needs_no_action_guard(self) -> None:
+        self.assertIsNone(
+            routing.action_claim_guard(
+                tool_results=[("HassTurnOn", False)],
+                read_only_tools={"HassTurnOn": False},
+            )
+        )
+
+    def test_failed_mutation_forbids_success_claim(self) -> None:
+        guard = routing.action_claim_guard(
+            tool_results=[("HassTurnOn", True)],
+            read_only_tools={"HassTurnOn": False},
+        )
+        self.assertIn("keine Geräteaktion erfolgreich", guard)
+
 
 if __name__ == "__main__":
     unittest.main()

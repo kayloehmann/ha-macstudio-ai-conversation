@@ -44,6 +44,36 @@ def deny_document_request(*, text: str, private_allowed: bool) -> bool:
     return is_document_request(text) and not private_allowed
 
 
+def action_claim_guard(
+    *, tool_results: list[tuple[str, bool]], read_only_tools: dict[str, bool]
+) -> str | None:
+    """Return a model guard when no successful device mutation occurred."""
+    if not tool_results:
+        return None
+
+    successful_mutation = any(
+        not read_only_tools.get(tool_name, False) and not result_error
+        for tool_name, result_error in tool_results
+    )
+    if successful_mutation:
+        return None
+
+    attempted_mutation = any(
+        not read_only_tools.get(tool_name, False)
+        for tool_name, _result_error in tool_results
+    )
+    if attempted_mutation:
+        return (
+            "Es wurde keine Geräteaktion erfolgreich ausgeführt. Behaupte keinen "
+            "Erfolg und nenne den Fehler knapp."
+        )
+    return (
+        "Es wurde ausschließlich ein Zustand abgefragt und keine Geräteaktion "
+        "ausgeführt. Antworte nur mit dem Zustand. Sage insbesondere nicht, du "
+        "hättest etwas ein-, aus- oder umgeschaltet."
+    )
+
+
 def session_user(
     *, device_id: str | None, user_id: str | None, conversation_id: str | None
 ) -> str:

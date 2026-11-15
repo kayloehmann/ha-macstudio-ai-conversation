@@ -44,6 +44,7 @@ from .const import (
     RECOMMENDED_TOP_P,
 )
 from .routing import (
+    action_claim_guard,
     deny_document_request,
     is_document_request,
     private_context_allowed,
@@ -112,7 +113,9 @@ def _convert_content_to_param(
         return ChatCompletionToolMessageParam(
             role="tool",
             tool_call_id=content.tool_call_id,
-            content=json.dumps(content.tool_result),
+            content=json.dumps(
+                {"data": content.result.data, "error": content.result.error}
+            ),
         )
     if content.role != "assistant" or not content.tool_calls:  # type: ignore[union-attr]
         return cast(
@@ -248,11 +251,16 @@ class MacStudioAiConversationEntity(
             return err.as_conversation_result()
 
         tools: list[ChatCompletionToolParam] | None = None
+        read_only_tools: dict[str, bool] = {}
         if chat_log.llm_api:
             tools = [
                 _format_tool(tool, chat_log.llm_api.custom_serializer)
                 for tool in chat_log.llm_api.tools
             ]
+            read_only_tools = {
+                tool.name: tool.annotations.read_only
+                for tool in chat_log.llm_api.tools
+            }
 
         messages = [_convert_content_to_param(content) for content in chat_log.content]
 
@@ -297,18 +305,34 @@ class MacStudioAiConversationEntity(
                     for tool_call in response.tool_calls
                 ]
 
-            messages.extend(
-                [
-                    _convert_content_to_param(tool_response)
-                    async for tool_response in chat_log.async_add_assistant_content(
-                        conversation.AssistantContent(
-                            agent_id=user_input.agent_id,
-                            content=response.content or "",
-                            tool_calls=tool_calls,
-                        )
+            tool_responses = [
+                tool_response
+                async for tool_response in chat_log.async_add_assistant_content(
+                    conversation.AssistantContent(
+                        agent_id=user_input.agent_id,
+                        content=response.content or "",
+                        tool_calls=tool_calls,
                     )
-                ]
+                )
+            ]
+            messages.extend(
+                _convert_content_to_param(tool_response)
+                for tool_response in tool_responses
             )
+            guard = action_claim_guard(
+                tool_results=[
+                    (tool_response.tool_name, tool_response.result.error)
+                    for tool_response in tool_responses
+                ],
+                read_only_tools=read_only_tools,
+            )
+            if guard:
+                messages.append(
+                    cast(
+                        ChatCompletionMessageParam,
+                        {"role": "system", "content": guard},
+                    )
+                )
 
             if not tool_calls:
                 break

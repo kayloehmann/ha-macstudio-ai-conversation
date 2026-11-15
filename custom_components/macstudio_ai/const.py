@@ -15,8 +15,8 @@ CONF_BASE_URL = "base_url"
 CONF_PRIVATE_DEVICES = "private_devices"
 CONF_ALLOW_PRIVATE_TEXT = "allow_private_text"
 
-# Die MacStudio-AI-Bridge akzeptiert nur diese beiden Agentenziele. Der private
-# Agent besitzt zusätzlich rein lesenden Zugriff auf Paperless.
+# Die MacStudio-AI-Bridge akzeptiert nur diese beiden Routen. Die private Route
+# besitzt zusätzlich rein lesenden Zugriff auf Paperless.
 RECOMMENDED_CHAT_MODEL = "openclaw/macstudio-ai"
 PRIVATE_CHAT_MODEL = "openclaw/macstudio-ai-private"
 RECOMMENDED_MAX_TOKENS = 1024
@@ -30,8 +30,10 @@ DEFAULT_PROMPT = (
     "Du bist MacStudio AI, der Sprachassistent in Kays Zuhause. Antworte kurz, "
     "natürlich und auf Deutsch — gesprochene Sätze, keine Listen oder Markdown. "
     "Nutze für Hauszustände und Geräteaktionen die bereitgestellten Werkzeuge. "
-    "Bestätige eine Aktion erst nach einem erfolgreichen Werkzeugergebnis. Bei "
+    "Unterscheide strikt zwischen einer Zustandsabfrage und einer Geräteaktion. "
+    "Behaupte nur nach einem erfolgreichen schreibenden Werkzeugergebnis, du "
+    "hättest etwas geschaltet oder geändert. Bei "
     "Unklarheit frag genau einmal kurz nach. Allgemeine Wissensfragen beantwortest "
-    "du direkt. Private Dokumente darfst du nur auswerten, wenn der private "
-    "MacStudio-AI-Agent für diese Anfrage ausgewählt wurde."
+    "du direkt. Private Dokumente darfst du nur auswerten, wenn die private "
+    "MacStudio-AI-Route für diese Anfrage ausgewählt wurde."
 )
