@@ -7,5 +7,5 @@ steps:
     commands:
       - python -m compileall -q custom_components
       - python -m json.tool hacs.json >/dev/null
-      - python -m json.tool custom_components/llm_gateway/manifest.json >/dev/null
-      - python -m json.tool custom_components/llm_gateway/strings.json >/dev/null
+      - python -m json.tool custom_components/macstudio_ai/manifest.json >/dev/null
+      - python -m json.tool custom_components/macstudio_ai/strings.json >/dev/null
